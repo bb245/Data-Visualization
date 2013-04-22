@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<head>
+ <!--Load the AJAX API-->
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<title>Web analytics client[Socket.io]</title>
+<script src="/socket.io/socket.io.js"></script>
+<script type="text/javascript">
+
+ // Load the Visualization API and the piechart package.
+ google.load('visualization', '1.0', {'packages':['corechart']});
+ google.load('visualization', '1', {packages: ['geomap']});
+ // Set a callback to run when the Google Visualization API is loaded.
+ google.setOnLoadCallback(drawChart);
+ google.setOnLoadCallback(drawRegionsMap);
+ google.setOnLoadCallback(drawVisualization);
+ // Callback that creates and populates a data table,
+ // instantiates the pie chart, passes in the data and
+ // draws it.
+
+function connect(){
+
+                var socket =  io.connect('http://invengion.org:3939');
+
+                socket.on('connect', function () {
+                          var browser_Name = browserDetect();
+
+                         // alert("Browser Name: " + window.navigator.appName);
+                         // alert("Browser CodeName: "+ window.navigator.appCodeName);
+                         // alert("Browser Version: "+ window.navigator.appVersion);
+                         // alert("Platform: " + window.navigator.platform);
+
+                          socket.emit ('KickStart', 'getUserDetails');
+
+                         socket.emit('browser_name',browser_Name );
+
+                          socket.emit('get_redis_data',"browser_name" );
+
+                          socket.on('redis_getOper_resp',function(reply){
+
+                            drawChart("Browser Name","Visited",reply,'chart_div');
+
+                          });
+                          socket.emit("get_country_data", "country_data");
+
+                          socket.on ("redis_getcntry_resp",function(resp){
+
+                              drawRegionsMap(resp,'geo_chart');
+                               drawColumnChart(resp,'bar_chart');
+
+                          });
+                           socket.on ('retSuccess', function(JSONua){
+                             document.getElementById("ip").innerHTML=JSONua;
+                        });
+                 });
+
+}
+
+function drawChart(col1,col2,reply,divid) {
+
+        // Create the data table.
+        var data = new google.visualization.DataTable();
+        data.addColumn('string', col1);
+        data.addColumn('number', col2);
+        data.addRows(reply);
+
+        // Set chart options
+        var options = {
+                       'width':500,
+                       'height':400};
+
+        //Instantiate and draw our chart, passing in some options.
+        var chart = new google.visualization.PieChart(document.getElementById(divid));
+        chart.draw(data, options);
+}
+
+function drawRegionsMap(datarr,divid) {
+         console.log({here: datarr});
+        var mapdata = google.visualization.arrayToDataTable(datarr);
+        var options = {
+            'width': 800,
+            'height' :500
+        };
+        var geomap = new google.visualization.GeoMap(
+        document.getElementById(divid));
+        geomap.draw(mapdata,options);
+}
+
+ function drawColumnChart(dataarr,divid) {
+        var wrapper = new google.visualization.ChartWrapper({
+          chartType: 'ColumnChart',
+          dataTable: dataarr,
+          options: {'title': 'Countries'},
+          containerId: divid
+        });
+        wrapper.draw();
+      }
+function browserDetect(){
+        var nVer = navigator.appVersion;
+        var nAgt = navigator.userAgent;
+        var browserName  = navigator.appName;
+        var fullVersion  = ''+parseFloat(navigator.appVersion);
+        var majorVersion = parseInt(navigator.appVersion,10);
+        var nameOffset,verOffset,ix;
+
+        // In Opera, the true version is after "Opera" or after "Version"
+        if ((verOffset=nAgt.indexOf("Opera"))!=-1) {
+         browserName = "Opera";
+         fullVersion = nAgt.substring(verOffset+6);
+         if ((verOffset=nAgt.indexOf("Version"))!=-1)
+           fullVersion = nAgt.substring(verOffset+8);
+        }
+        // In MSIE, the true version is after "MSIE" in userAgent
+        else if ((verOffset=nAgt.indexOf("MSIE"))!=-1) {
+         browserName = "Microsoft Internet Explorer";
+         fullVersion = nAgt.substring(verOffset+5);
+        }
+        // In Chrome, the true version is after "Chrome"
+        else if ((verOffset=nAgt.indexOf("Chrome"))!=-1) {
+         browserName = "Chrome";
+         fullVersion = nAgt.substring(verOffset+7);
+        }
+        // In Safari, the true version is after "Safari" or after "Version"
+        else if ((verOffset=nAgt.indexOf("Safari"))!=-1) {
+         browserName = "Safari";
+         fullVersion = nAgt.substring(verOffset+7);
+         if ((verOffset=nAgt.indexOf("Version"))!=-1)
+           fullVersion = nAgt.substring(verOffset+8);
+        }
+        // In Firefox, the true version is after "Firefox"
+        else if ((verOffset=nAgt.indexOf("Firefox"))!=-1) {
+         browserName = "Firefox";
+         fullVersion = nAgt.substring(verOffset+8);
+        }
+        // In most other browsers, "name/version" is at the end of userAgent
+        else if ( (nameOffset=nAgt.lastIndexOf(' ')+1) <
+                          (verOffset=nAgt.lastIndexOf('/')) )
+        {
+         browserName = nAgt.substring(nameOffset,verOffset);
+         fullVersion = nAgt.substring(verOffset+1);
+         if (browserName.toLowerCase()==browserName.toUpperCase()) {
+          browserName = navigator.appName;
+         }
+        }
+        // trim the fullVersion string at semicolon/space if present
+        if ((ix=fullVersion.indexOf(";"))!=-1)
+           fullVersion=fullVersion.substring(0,ix);
+        if ((ix=fullVersion.indexOf(" "))!=-1)
+           fullVersion=fullVersion.substring(0,ix);
+
+        majorVersion = parseInt(''+fullVersion,10);
+        if (isNaN(majorVersion)) {
+         fullVersion  = ''+parseFloat(navigator.appVersion);
+         majorVersion = parseInt(navigator.appVersion,10);
+        }
+
+        return browserName;
+//      document.write(''
+//       +'Browser name  = '+browserName+'<br>'
+//       +'Full version  = '+fullVersion+'<br>'
+//       +'Major version = '+majorVersion+'<br>'
+//       +'navigator.appName = '+navigator.appName+'<br>'
+//       +'navigator.userAgent = '+navigator.userAgent+'<br>'
+//      )
+}
+</script>
+</head>
+
+<body onLoad="connect()">
+<h2>Webpage analytics</h3>
+
+<h3>Browser wise - Analytics</h3>
+<div id="chart_div"; style="clear:both";></div>
+<div id ="note"></div>
+
+<h3>Country wise - Analytics</h3>
+<div id="geo_chart" style="border: 1px; float:left;"></div>
+<div id ="bar_chart" style="float:left;"></div>
+
+
+</body>
+</html>
+                                                
