@@ -18,9 +18,9 @@
  // draws it.
 
 function connect(){
-
+                
                 var socket =  io.connect('http://invengion.org:3939');
-
+                
                 socket.on('connect', function () {
                           var browser_Name = browserDetect();
 
@@ -29,32 +29,49 @@ function connect(){
                          // alert("Browser Version: "+ window.navigator.appVersion);
                          // alert("Platform: " + window.navigator.platform);
 
-                          socket.emit ('KickStart', 'getUserDetails');
+                          socket.emit('KickStart', 'getUserDetails');
+                         socket.on('activeClient',function(msg){
+                            document.getElementById("client_count").innerHTML=msg.client;
 
-                         socket.emit('browser_name',browser_Name );
+                        });                    
+                        
+                          socket.emit('browser_name',browser_Name);
 
-                          socket.emit('get_redis_data',"browser_name" );
+                          socket.emit('get_browser_data',"browser_name");
 
-                          socket.on('redis_getOper_resp',function(reply){
+                          setInterval (function(){
+                          socket.emit('get_browser_data',"browser_name" )},1000*1);
+                
 
+                          socket.on('redis_getOper_response',function(reply){
+            
                             drawChart("Browser Name","Visited",reply,'chart_div');
-
+                                                                                                             
                           });
+                          
                           socket.emit("get_country_data", "country_data");
+                          
+                          setInterval (function(){
+                          socket.emit("get_country_data", "country_data")},1000*3);  
+                        
 
-                          socket.on ("redis_getcntry_resp",function(resp){
-
+                          socket.on("redis_getcntry_response",function(resp){
+                     
                               drawRegionsMap(resp,'geo_chart');
-                               drawColumnChart(resp,'bar_chart');
+
+                              drawColumnChart(resp,'bar_chart');
 
                           });
                            socket.on ('retSuccess', function(JSONua){
+
                              document.getElementById("ip").innerHTML=JSONua;
+
                         });
                  });
 
-}
-
+//                          socket.on('refresh', function(data){
+//                          alert(data);
+//              });           
 function drawChart(col1,col2,reply,divid) {
 
         // Create the data table.
@@ -93,12 +110,11 @@ function drawRegionsMap(datarr,divid) {
           containerId: divid
         });
         wrapper.draw();
-      }
 function browserDetect(){
         var nVer = navigator.appVersion;
         var nAgt = navigator.userAgent;
         var browserName  = navigator.appName;
-        var fullVersion  = ''+parseFloat(navigator.appVersion);
+        var fullVersion  = ''+parseFloat(navigator.appVersion); 
         var majorVersion = parseInt(navigator.appVersion,10);
         var nameOffset,verOffset,ix;
 
@@ -106,7 +122,7 @@ function browserDetect(){
         if ((verOffset=nAgt.indexOf("Opera"))!=-1) {
          browserName = "Opera";
          fullVersion = nAgt.substring(verOffset+6);
-         if ((verOffset=nAgt.indexOf("Version"))!=-1)
+         if ((verOffset=nAgt.indexOf("Version"))!=-1) 
            fullVersion = nAgt.substring(verOffset+8);
         }
         // In MSIE, the true version is after "MSIE" in userAgent
@@ -114,26 +130,26 @@ function browserDetect(){
          browserName = "Microsoft Internet Explorer";
          fullVersion = nAgt.substring(verOffset+5);
         }
-        // In Chrome, the true version is after "Chrome"
+        // In Chrome, the true version is after "Chrome" 
         else if ((verOffset=nAgt.indexOf("Chrome"))!=-1) {
          browserName = "Chrome";
          fullVersion = nAgt.substring(verOffset+7);
         }
-        // In Safari, the true version is after "Safari" or after "Version"
+        // In Safari, the true version is after "Safari" or after "Version" 
         else if ((verOffset=nAgt.indexOf("Safari"))!=-1) {
          browserName = "Safari";
          fullVersion = nAgt.substring(verOffset+7);
-         if ((verOffset=nAgt.indexOf("Version"))!=-1)
+         if ((verOffset=nAgt.indexOf("Version"))!=-1) 
            fullVersion = nAgt.substring(verOffset+8);
         }
-        // In Firefox, the true version is after "Firefox"
+        // In Firefox, the true version is after "Firefox" 
         else if ((verOffset=nAgt.indexOf("Firefox"))!=-1) {
          browserName = "Firefox";
          fullVersion = nAgt.substring(verOffset+8);
         }
-        // In most other browsers, "name/version" is at the end of userAgent
-        else if ( (nameOffset=nAgt.lastIndexOf(' ')+1) <
-                          (verOffset=nAgt.lastIndexOf('/')) )
+        // In most other browsers, "name/version" is at the end of userAgent 
+        else if ( (nameOffset=nAgt.lastIndexOf(' ')+1) < 
+                          (verOffset=nAgt.lastIndexOf('/')) ) 
         {
          browserName = nAgt.substring(nameOffset,verOffset);
          fullVersion = nAgt.substring(verOffset+1);
@@ -149,10 +165,10 @@ function browserDetect(){
 
         majorVersion = parseInt(''+fullVersion,10);
         if (isNaN(majorVersion)) {
-         fullVersion  = ''+parseFloat(navigator.appVersion);
+         fullVersion  = ''+parseFloat(navigator.appVersion); 
          majorVersion = parseInt(navigator.appVersion,10);
         }
-
+        
         return browserName;
 //      document.write(''
 //       +'Browser name  = '+browserName+'<br>'
@@ -162,13 +178,15 @@ function browserDetect(){
 //       +'navigator.userAgent = '+navigator.userAgent+'<br>'
 //      )
 }
+
 </script>
 </head>
-
 <body onLoad="connect()">
 <h2>Webpage analytics</h3>
 
 <h3>Browser wise - Analytics</h3>
+<!--<h5 style="color:maroon; float:left;">Clients connected:</h5><div id="client_count";style="float:left";>0</div>-->
+<span id="client_count">0</span> connected clients
 <div id="chart_div"; style="clear:both";></div>
 <div id ="note"></div>
 
@@ -179,4 +197,3 @@ function browserDetect(){
 
 </body>
 </html>
-                                                
